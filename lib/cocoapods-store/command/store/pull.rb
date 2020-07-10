@@ -1,4 +1,4 @@
-require 'aws-sdk'
+
 require 'yaml'
 
 module Pod
@@ -34,11 +34,8 @@ module Pod
 				# Run steps
 
 				def pull_from_store
-
+          zip_name = "#{cache_dir_name}.zip"
 					s3 = load_s3_bucket
-
-					zip_name = "#{cache_dir_name}.zip"
-
 					obj = s3.bucket(@bucket).object(zip_name)
 
 					if !obj.exists?
@@ -47,18 +44,14 @@ module Pod
 					end
 
 					UI.puts "Downloading #{zip_name}"
-
-				  success = obj.download_file(zip_name)
-
+          success = obj.get(response_target: zip_name)
 					if !success
 						UI.puts "An error occurred attempt to download the cache item"
 						exit
 					end
-
 				end
 
 				def replace_installation_data
-
 					zip_name = "#{cache_dir_name}.zip"
 
 					FileUtils.rm_rf "#{Dir.pwd}/Pods"

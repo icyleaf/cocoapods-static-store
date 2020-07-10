@@ -1,5 +1,3 @@
-require 'aws-sdk'
-
 module Pod
   class Command
 		class Store < Command
@@ -15,9 +13,9 @@ module Pod
 
 				# Accessors
 
-				def commit
-					return `git show --pretty=%H`
-				end
+				# def commit
+				# 	return `git show --pretty=%H`
+				# end
 
 				# Plugin Lifecycle
 
@@ -30,6 +28,7 @@ module Pod
 				end
 
 				def run
+          UI.puts "cocoapods-store version: #{CocoapodsStore::VERSION}"
 
 					verify_podfile_exists!
 					verify_lockfile_exists!
@@ -41,8 +40,12 @@ module Pod
 				# Run steps
 
 				def archive_cache
-
-					@cache_dir = "#{Dir.pwd}/#{cache_dir_name}"
+          @cache_dir = "#{Dir.pwd}/#{cache_dir_name}"
+          @zip_name = "#{cache_dir_name}.zip"
+          if File.exist?(File.join(@cache_dir, @zip_name))
+            UI.puts "Found existed cache file: #{File.join(@cache_dir, @zip_name)}".yellow
+            return
+          end
 
 					UI.puts "Creating cache directory: #{@cache_dir}"
 
@@ -58,11 +61,11 @@ module Pod
 						UI.puts "[!] An error occurred - #{e.message}".red
 						FileUtils.rm_rf @cache_dir
 						exit 1
-					end
+          end
 
 					# Archive the cache folder
-					@zip_name = "#{cache_dir_name}.zip"
-					system "ditto -ck --rsrc --sequesterRsrc #{cache_dir_name} #{@zip_name}"
+          UI.puts "Creating zip file: #{@zip_name}"
+          system "ditto -ck --rsrc --sequesterRsrc #{cache_dir_name} #{@zip_name}"
 				end
 
 				def push_cache
@@ -70,7 +73,7 @@ module Pod
 					begin
 						s3 = load_s3_bucket
 
-						obj = s3.bucket('pod-store').object(@zip_name)
+						obj = s3.bucket(@bucket).object(@zip_name)
 						UI.puts "Uploading #{@zip_name}"
 						obj.upload_file("#{Dir.pwd}/#{@zip_name}")
 

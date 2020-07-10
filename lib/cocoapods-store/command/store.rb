@@ -1,3 +1,4 @@
+require 'aws-sdk-s3'
 require 'cocoapods-store/command/store/push'
 require 'cocoapods-store/command/store/pull'
 
@@ -30,6 +31,7 @@ module Pod
 
 			def self.options
 				[
+          ['--server',			'The AWS server address.'	],
 					['--bucket',			'The bucket to use as the store.'	],
 					['--aws-key',			'Your AWS access key ID.'					],
 					['--aws-secret',	'Your AWS secret access key.'			]
@@ -42,15 +44,16 @@ module Pod
 				prefs_file = '.cocoapods-store.yml'
 				prefs = (File.exist?(prefs_file) && YAML.load_file(prefs_file)) || {}
 
+				@server = argv.option('server', nil) || prefs['server']
 				@bucket = argv.option('bucket', nil) || prefs['bucket']
 				@aws_public_key = argv.option('aws-key', nil) || prefs['aws-key']
 				@aws_private_key = argv.option('aws-secret', nil) || prefs['aws-secret']
-
 		end
 
 			def validate!
 				super
 
+        help! "A AWS server must be specified using --server" unless @server
 				help! "A bucket must be specified using --bucket" unless @bucket
 				help! "An AWS access key ID must be specified using --aws-key" unless @aws_public_key
 				help! "An AWS secret access key must be specified using --aws-secret" unless @aws_private_key
@@ -58,21 +61,22 @@ module Pod
 
 			# Methods
 
-			def load_s3_bucket
-				Aws.config[:region] = 'eu-west-1' # Required for config, but unneeded by S3
+      def load_s3_bucket
+        Aws.config.update(
+          endpoint: 'http://172.16.9.3:9000',
+          access_key_id: 'minioadmin',
+          secret_access_key: 'minioadmin',
+          force_path_style: true,
+          region: 'bj-zealot-1'
+        )
 
-				client = Aws::S3::Client.new(
-					access_key_id: @aws_public_key,
-					secret_access_key: @aws_private_key,
-				)
-
-				return Aws::S3::Resource.new(client: client)
+				return Aws::S3::Resource.new
 			end
 
 			# Accessors
 
 			def commit
-				return `git show --pretty=%H`
+				return `git rev-parse HEAD`
 			end
 
 			def project_name
